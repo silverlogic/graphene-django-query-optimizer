@@ -6,7 +6,7 @@ import pytest
 from graphene.types.definitions import GrapheneUnionType
 
 from example_project.app.models import Example
-from query_optimizer.ast import GraphQLASTWalker, get_fragment_type, get_model_field
+from query_optimizer.ast import GraphQLASTWalker, get_field_def, get_fragment_type, get_model_field
 from query_optimizer.errors import OptimizerError
 
 
@@ -60,3 +60,28 @@ def test_get_fragment_type__not_in_schema():
 
 def test_get_model_field__set_suffix_for_to_one_field():
     assert get_model_field(Example, "forward_one_to_one_field_set") is None
+
+
+def test_get_field_def__schema_get_field():
+    # graphql-core >= 3.3 looks up the field through 'GraphQLSchema.get_field'.
+    schema = Mock(spec=["get_field"])
+    parent_type = Mock()
+    field_node = Mock()
+
+    field_def = get_field_def(schema, parent_type, field_node)
+
+    assert field_def == schema.get_field.return_value
+    schema.get_field.assert_called_once_with(parent_type, field_node.name.value)
+
+
+def test_get_field_def__execute_get_field_def():
+    # graphql-core < 3.3 has no 'GraphQLSchema.get_field', so the lookup uses 'get_field_def' from execute.
+    schema = Mock(spec=[])
+    parent_type = Mock()
+    field_node = Mock()
+
+    with patch("graphql.execution.execute.get_field_def") as mock_get_field_def:
+        field_def = get_field_def(schema, parent_type, field_node)
+
+    assert field_def == mock_get_field_def.return_value
+    mock_get_field_def.assert_called_once_with(schema, parent_type, field_node)
