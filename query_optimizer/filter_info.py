@@ -8,9 +8,8 @@ from graphene.utils.str_converters import to_snake_case
 from graphene_django.settings import graphene_settings
 from graphene_django.utils import DJANGO_FILTER_INSTALLED
 from graphql import get_argument_values
-from graphql.execution.execute import get_field_def
 
-from .ast import GraphQLASTWalker, get_underlying_type, is_connection, is_node
+from .ast import GraphQLASTWalker, get_field_def, get_underlying_type, is_connection, is_node
 from .typing import GraphQLFilterInfo
 from .utils import swappable_by_subclassing
 

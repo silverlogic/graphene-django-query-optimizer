@@ -15,7 +15,6 @@ from graphene.utils.str_converters import to_snake_case
 from graphene_django import DjangoObjectType
 from graphene_django.registry import get_global_registry
 from graphql import FieldNode, FragmentSpreadNode, InlineFragmentNode, SelectionNode
-from graphql.execution.execute import get_field_def
 
 from .errors import OptimizerError
 from .settings import optimizer_settings
@@ -25,7 +24,7 @@ if TYPE_CHECKING:
     from django.db.models import Field, Model
     from graphene.types.base import BaseOptions
     from graphene.types.definitions import GrapheneInterfaceType
-    from graphql import FragmentDefinitionNode, GraphQLField, GraphQLOutputType, GraphQLSchema
+    from graphql import FragmentDefinitionNode, GraphQLCompositeType, GraphQLField, GraphQLOutputType, GraphQLSchema
 
     from .typing import Any, Generator, GQLInfo, ModelField, ToManyField, ToOneField, TypeGuard
 
@@ -297,6 +296,21 @@ def is_to_many(field: ModelField) -> TypeGuard[ToManyField]:
 
 def is_to_one(field: ModelField) -> TypeGuard[ToOneField]:
     return bool(field.many_to_one or field.one_to_one)
+
+
+def get_field_def(schema: GraphQLSchema, parent_type: GraphQLCompositeType, field_node: FieldNode) -> GraphQLField:
+    """
+    Get the definition of the field the given field node selects from the parent type.
+
+    graphql-core 3.3 removed 'graphql.execution.execute.get_field_def' in favor of
+    'GraphQLSchema.get_field', which also handles the introspection fields.
+    """
+    if hasattr(schema, "get_field"):  # graphql-core >= 3.3
+        return schema.get_field(parent_type, field_node.name.value)  # type: ignore[return-value]
+
+    from graphql.execution.execute import get_field_def as _get_field_def  # noqa: PLC0415
+
+    return _get_field_def(schema, parent_type, field_node)  # type: ignore[arg-type]
 
 
 def get_fragment_type(
